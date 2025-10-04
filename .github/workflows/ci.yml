@@ -1,0 +1,65 @@
+name: CI - Build & smoke test with Docker Compose
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      # App port for smoke tests
+      APP_PORT: 3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env from repository secrets (do not print)
+        run: |
+          set -eu
+          # Create .env in the repo root used by docker-compose.yml
+          cat > .env <<EOF
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          EOF
+        # secrets are masked automatically by Actions
+
+      - name: Build and start services
+        run: |
+          docker compose up --build -d
+
+      - name: Wait for app to be ready
+        run: |
+          # Try app health endpoint several times
+          retries=10
+          until curl -sS http://localhost:${APP_PORT}/health | grep -q '"status":"ok"' || [ $retries -le 0 ]; do
+            echo "Waiting for app... ($retries)"
+            sleep 2
+            retries=$((retries-1))
+          done
+          if [ $retries -le 0 ]; then
+            echo "App did not become ready" >&2
+            docker compose logs --no-color
+            exit 1
+          fi
+
+      - name: Smoke test - create user and list users
+        run: |
+          # Create a user
+          resp=$(curl -s -X POST http://localhost:${APP_PORT}/users -H "Content-Type: application/json" -d '{"name":"CI User","email":"ci@example.com"}')
+          echo "Create response: $resp"
+          # List users
+          curl -s http://localhost:${APP_PORT}/users | jq -r '.[] | "\(.id) \(.name) \(.email)"' || true
+
+      - name: Teardown
+        if: always()
+        run: |
+          docker compose down -v
