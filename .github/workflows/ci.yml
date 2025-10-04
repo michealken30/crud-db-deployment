@@ -39,7 +39,7 @@ jobs:
       - name: Wait for app to be ready
         run: |
           # Try app health endpoint several times
-          retries=10
+          retries=25
           until curl -sS http://localhost:${APP_PORT}/health | grep -q '"status":"ok"' || [ $retries -le 0 ]; do
             echo "Waiting for app... ($retries)"
             sleep 2
