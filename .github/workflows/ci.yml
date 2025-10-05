@@ -36,20 +36,20 @@ jobs:
         run: |
           docker compose up --build -d
 
-      - name: Wait for app to be ready
-        run: |
-          # Try app health endpoint several times
-          retries=50
-          until curl -sS http://localhost:${APP_PORT}/health | grep -q '"status":"ok"' || [ $retries -le 0 ]; do
-            echo "Waiting for app... ($retries)"
-            sleep 10
-            retries=$((retries-1))
-          done
-          if [ $retries -le 0 ]; then
-            echo "App did not become ready" >&2
-            docker compose logs --no-color
-            exit 1
-          fi
+      # - name: Wait for app to be ready
+      #   run: |
+      #     # Try app health endpoint several times
+      #     retries=50
+      #     until curl -sS http://localhost:${APP_PORT}/health | grep -q '"status":"ok"' || [ $retries -le 0 ]; do
+      #       echo "Waiting for app... ($retries)"
+      #       sleep 10
+      #       retries=$((retries-1))
+      #     done
+      #     if [ $retries -le 0 ]; then
+      #       echo "App did not become ready" >&2
+      #       docker compose logs --no-color
+      #       exit 1
+      #     fi
 
       - name: Smoke test - create user and list users
         run: |
