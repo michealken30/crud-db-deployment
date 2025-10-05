@@ -10,7 +10,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      # App port for smoke tests
       APP_PORT: 3000
 
     steps:
@@ -30,7 +29,6 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_NAME=${{ secrets.DB_NAME }}
           EOF
-        # secrets are masked automatically by Actions
 
       - name: Build and start services
         run: |
